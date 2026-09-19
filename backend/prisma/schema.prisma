@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleCode {
+  ADMIN
+  LEADER
+}
+
+enum RegistrationStatus {
+  PENDING
+  VERIFIED
+  ARCHIVED
+}
+
+enum RegistrationSource {
+  PUBLIC_FORM
+}
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  REGISTRATION_CREATED
+  REGISTRATION_LISTED
+  REGISTRATION_UPDATED
+  SENSITIVE_DATA_READ
+  USER_CREATED
+  USER_UPDATED
+  LEADER_ASSIGNED
+  CATALOG_CREATED
+  DASHBOARD_READ
+  AUDIT_READ
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        RoleCode @unique
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(250)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id             String     @id @default(uuid()) @db.Uuid
+  roleId         String     @map("role_id") @db.Uuid
+  role           Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  firstName      String     @map("first_name") @db.VarChar(100)
+  lastName       String     @map("last_name") @db.VarChar(100)
+  email          String     @unique @db.VarChar(254)
+  phoneEncrypted String?    @map("phone_encrypted") @db.Text
+  passwordHash   String     @map("password_hash") @db.VarChar(255)
+  active         Boolean    @default(true)
+  failedAttempts Int        @default(0) @map("failed_attempts")
+  lockedUntil    DateTime?  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt    DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  leaderId       String?    @map("leader_id") @db.Uuid
+  leader         Leader?    @relation(fields: [leaderId], references: [id], onDelete: Restrict)
+  sessions       Session[]
+  auditLogs      AuditLog[]
+
+  @@index([roleId, active])
+  @@index([leaderId, active])
+  @@map("users")
+}
+
+model Province {
+  id             String         @id @default(uuid()) @db.Uuid
+  code           String         @unique @db.VarChar(20)
+  name           String         @unique @db.VarChar(100)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  municipalities Municipality[]
+
+  @@map("provinces")
+}
+
+model Municipality {
+  id            String               @id @default(uuid()) @db.Uuid
+  provinceId    String               @map("province_id") @db.Uuid
+  province      Province             @relation(fields: [provinceId], references: [id], onDelete: Restrict)
+  code          String               @unique @db.VarChar(20)
+  name          String               @db.VarChar(100)
+  active        Boolean              @default(true)
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  schools       School[]
+  leaders       LeaderMunicipality[]
+  registrations Registration[]
+
+  @@unique([provinceId, name])
+  @@index([provinceId, active])
+  @@map("municipalities")
+}
+
+model School {
+  id             String         @id @default(uuid()) @db.Uuid
+  municipalityId String         @map("municipality_id") @db.Uuid
+  municipality   Municipality   @relation(fields: [municipalityId], references: [id], onDelete: Restrict)
+  code           String?        @unique @db.VarChar(30)
+  name           String         @db.VarChar(200)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  registrations  Registration[]
+
+  // La FK compuesta de Registration impide escuelas de otro municipio.
+  @@unique([id, municipalityId])
+  @@unique([municipalityId, name])
+  @@index([municipalityId, active])
+  @@map("schools")
+}
+
+model Leader {
+  id             String               @id @default(uuid()) @db.Uuid
+  name           String               @db.VarChar(150)
+  users          User[]
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  municipalities LeaderMunicipality[]
+
+  @@map("leaders")
+}
+
+model LeaderMunicipality {
+  leaderId       String       @map("leader_id") @db.Uuid
+  municipalityId String       @map("municipality_id") @db.Uuid
+  leader         Leader       @relation(fields: [leaderId], references: [id], onDelete: Cascade)
+  municipality   Municipality @relation(fields: [municipalityId], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([leaderId, municipalityId])
+  @@index([municipalityId])
+  @@map("leader_municipalities")
+}
+
+model Registration {
+  id              String             @id @default(uuid()) @db.Uuid
+  firstName       String             @map("first_name") @db.VarChar(100)
+  lastName        String             @map("last_name") @db.VarChar(100)
+  cedulaEncrypted String             @map("cedula_encrypted") @db.Text
+  cedulaHmac      String             @unique @map("cedula_hmac") @db.Char(64)
+  phoneEncrypted  String             @map("phone_encrypted") @db.Text
+  municipalityId  String             @map("municipality_id") @db.Uuid
+  municipality    Municipality       @relation(fields: [municipalityId], references: [id], onDelete: Restrict)
+  schoolId        String?            @map("school_id") @db.Uuid
+  school          School?            @relation(fields: [schoolId, municipalityId], references: [id, municipalityId], onDelete: Restrict)
+  schoolName      String?            @map("school_name") @db.VarChar(200)
+  status          RegistrationStatus @default(PENDING)
+  source          RegistrationSource @default(PUBLIC_FORM)
+  consentVersion  String             @map("consent_version") @db.VarChar(40)
+  consentAt       DateTime           @default(now()) @map("consent_at") @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([municipalityId, status, createdAt])
+  @@index([schoolId, municipalityId])
+  @@index([createdAt, id])
+  @@map("registrations")
+}
+
+model AuditLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  actorId    String?     @map("actor_id") @db.Uuid
+  actor      User?       @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action     AuditAction
+  entityType String      @map("entity_type") @db.VarChar(50)
+  entityId   String?     @map("entity_id") @db.Uuid
+  requestId  String      @map("request_id") @db.Uuid
+  reason     String?     @db.VarChar(300)
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique @map("token_hash") @db.Char(64)
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
