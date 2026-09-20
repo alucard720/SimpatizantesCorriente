@@ -198,6 +198,30 @@ em {
   line-height: 1.85;
   margin-bottom: 48px;
 }
+.candidate-message {
+  margin: 24px 0;
+  padding: 20px 24px;
+  border-left: 5px solid var(--red);
+  border-radius: 0 12px 12px 0;
+  background: var(--blue);
+  color: #fff;
+}
+.candidate-message strong {
+  display: block;
+  color: #ffdf57;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 900;
+  line-height: 1.2;
+}
+.candidate-message span {
+  display: block;
+  margin-top: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .intro-note {
   position: relative;
   padding-left: 52px;

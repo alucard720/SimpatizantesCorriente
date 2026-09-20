@@ -101,6 +101,10 @@ export function Register() {
           <br />
           <em>nos une.</em>
         </h1>
+        <div className="candidate-message">
+          <strong>Menegildo de la Rosa</strong>
+          <span>Presidente ADP 2027-2030</span>
+        </div>
         <p>
           Registra tu simpatía por la Corriente Magisterial Juan Pablo Duarte y
           forma parte de nuestra comunidad.
