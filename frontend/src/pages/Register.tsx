@@ -4,6 +4,7 @@ import type { CatalogItem, Privacy } from "../types";
 import { api, send, message } from "../services/api";
 import { Captcha } from "../components/Captcha";
 import { CatalogSelect } from "../components/CatalogSelect";
+import { MaskedNumberInput } from "../components/MaskedNumberInput";
 export function Register() {
   const navigate = useNavigate();
   const [provinces, setProvinces] = useState<CatalogItem[]>([]),
@@ -130,24 +131,26 @@ export function Register() {
               </label>
               <label>
                 Cédula *
-                <input
+                <MaskedNumberInput
                   name="cedula"
-                  inputMode="numeric"
+                  groups={[3, 7, 1]}
                   placeholder="000-0000000-0"
-                  maxLength={20}
-                  pattern="[0-9 -]{11,20}"
+                  pattern="[0-9]{3}-[0-9]{7}-[0-9]"
+                  title="Introduce los 11 dígitos de tu cédula"
                   required
                 />
-                <small>11 dígitos, con o sin guiones.</small>
+                <small>11 dígitos. Los guiones se agregan automáticamente.</small>
               </label>
               <label>
                 Teléfono *
-                <input
+                <MaskedNumberInput
                   name="phone"
                   type="tel"
+                  groups={[3, 3, 4]}
                   autoComplete="tel"
-                  placeholder="809 000 0000"
-                  maxLength={24}
+                  placeholder="000-000-0000"
+                  pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                  title="Introduce los 10 dígitos de tu teléfono"
                   required
                 />
               </label>
