@@ -37,7 +37,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             path="*"
             element={
               <main className="narrow">
-                <h1>Página no encontrada</h1>
+                <h1>Página no encontra</h1>
                 <Link to="/">Ir al inicio</Link>
               </main>
             }
