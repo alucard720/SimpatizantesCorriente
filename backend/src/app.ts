@@ -16,7 +16,14 @@ app.disable("x-powered-by");
 if (env.TRUST_PROXY_HOPS) app.set("trust proxy", env.TRUST_PROXY_HOPS);
 app.use(
   requestContext,
-  helmet(),
+  helmet({
+    contentSecurityPolicy: {
+    directives: {
+      scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
+      frameSrc: ["'self'", "https://challenges.cloudflare.com"],
+    },
+   },
+  }),
   cors({ origin: allowedOrigins, credentials: true }),
   generalLimit,
   checkOrigin,
