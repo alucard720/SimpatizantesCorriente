@@ -5,9 +5,9 @@ import { execFileSync } from "node:child_process";
 import request from "supertest";
 import "dotenv/config";
 const database = process.env.TEST_DATABASE_URL;
-if (!database || !new URL(database).pathname.endsWith("_test"))
+if (!database || !(new URL(database).pathname.endsWith("_test") || /^codex_[a-z0-9_]+_test$/.test(new URL(database).searchParams.get("schema") ?? "")))
   throw new Error(
-    "TEST_DATABASE_URL debe apuntar a una base desechable cuyo nombre termine en _test",
+    "TEST_DATABASE_URL debe apuntar a una base _test o a un esquema desechable codex_*_test",
   );
 Object.assign(process.env, {
   NODE_ENV: "test",
@@ -34,6 +34,14 @@ const prefix = randomUUID().slice(0, 8),
   password = "synthetic-test-password-123";
 test("V1: registro, cifrado, duplicados, varios usuarios por líder, RBAC, CSRF, auditoría y revocación", async () => {
   try {
+    const catalog = await request(app).get("/api/public/provinces");
+    assert.equal(catalog.status, 200);
+    assert.equal(catalog.body.length, 32);
+    assert.equal(await db.seccional.count({where:{number:{not:null}}}),174);
+    const azua = catalog.body.find((p: {name: string}) => p.name === "AZUA");
+    const azuaSections = await request(app).get(`/api/public/seccionales?provinceId=${azua.id}`);
+    assert.deepEqual(azuaSections.body.map((s: {number:number})=>s.number), [1,2,3,4,5,6,7,8]);
+    assert.equal((await request(app).get("/api/public/municipalities")).status,404);
     const adminRole = await db.role.upsert({
       where: { code: "ADMIN" },
       update: {},
@@ -57,27 +65,33 @@ test("V1: registro, cifrado, duplicados, varios usuarios por líder, RBAC, CSRF,
     const p = await db.province.create({
       data: { code: prefix, name: `TEST Provincia ${prefix}` },
     });
-    const m1 = await db.municipality.create({
+    const m1 = await db.seccional.create({
         data: {
           provinceId: p.id,
           code: prefix + "A",
-          name: "TEST Municipio A",
+          number: 1,
+          name: "TEST Seccional A",
         },
       }),
-      m2 = await db.municipality.create({
+      m2 = await db.seccional.create({
         data: {
           provinceId: p.id,
           code: prefix + "B",
-          name: "TEST Municipio B",
+          number: 2,
+          name: "TEST Seccional B",
         },
       });
+    await assert.rejects(db.seccional.create({data:{provinceId:p.id,code:prefix+"duplicate",name:"Duplicate",number:1}}));
+    const historical = await db.seccional.create({data:{provinceId:p.id,code:prefix+"legacy",name:"Historical"}});
+    const visible = await request(app).get(`/api/public/seccionales?provinceId=${p.id}`);
+    assert.equal(visible.body.some((s: {id:string})=>s.id===historical.id),false);
     const school = await db.school.create({
-      data: { municipalityId: m2.id, name: "TEST Escuela B" },
+      data: { seccionalId: m2.id, name: "TEST Escuela B" },
     });
     const leader = await db.leader.create({
       data: {
         name: "TEST Líder " + prefix,
-        municipalities: { create: { municipalityId: m1.id } },
+        seccionales: { create: { seccionalId: m1.id } },
       },
     });
     const u1 = await db.user.create({
@@ -133,7 +147,7 @@ test("V1: registro, cifrado, duplicados, varios usuarios por líder, RBAC, CSRF,
       cedula,
       phone: "0000000000",
       provinceId: p.id,
-      municipalityId: m1.id,
+      seccionalId: m1.id,
       consent: true,
       consentVersion: "test-v1",
     };
@@ -155,6 +169,9 @@ test("V1: registro, cifrado, duplicados, varios usuarios por líder, RBAC, CSRF,
       ).status,
       400,
     );
+    for (const invalid of [{...body,provinceId:azua.id},{...body,seccionalId:historical.id}]) {
+      assert.equal((await request(app).post("/api/public/registrations").set("Origin",origin).send(invalid)).status,400);
+    }
     const [first, duplicate] = await Promise.all([
       request(app)
         .post("/api/public/registrations")
@@ -169,10 +186,10 @@ test("V1: registro, cifrado, duplicados, varios usuarios por líder, RBAC, CSRF,
     assert.equal(duplicate.status, 202);
     assert.deepEqual(first.body, duplicate.body);
     const record = await db.registration.findFirstOrThrow({
-      where: { municipalityId: m1.id },
+      where: { seccionalId: m1.id },
     });
     assert.equal(
-      await db.registration.count({ where: { municipalityId: m1.id } }),
+      await db.registration.count({ where: { seccionalId: m1.id } }),
       1,
     );
     assert.notEqual(record.cedulaEncrypted, cedula);
@@ -183,10 +200,10 @@ test("V1: registro, cifrado, duplicados, varios usuarios por líder, RBAC, CSRF,
       .send({
         ...body,
         cedula: "001" + cedula.slice(3),
-        municipalityId: m2.id,
+        seccionalId: m2.id,
       });
     const other = await db.registration.findFirstOrThrow({
-      where: { municipalityId: m2.id },
+      where: { seccionalId: m2.id },
     });
     for (const agent of [b, c]) {
       const list = await agent.get("/api/private/registrations");
@@ -197,7 +214,7 @@ test("V1: registro, cifrado, duplicados, varios usuarios por líder, RBAC, CSRF,
       assert.equal("phone" in list.body.items[0], false);
     }
     assert.equal(
-      (await b.get(`/api/private/registrations?municipalityId=${m2.id}`)).body
+      (await b.get(`/api/private/registrations?seccionalId=${m2.id}`)).body
         .total,
       0,
     );
@@ -276,9 +293,9 @@ test("V1: registro, cifrado, duplicados, varios usuarios por líder, RBAC, CSRF,
     assert.equal(
       (
         await a
-          .put(`/api/private/admin/leaders/${leader.id}/municipalities`)
+          .put(`/api/private/admin/leaders/${leader.id}/seccionales`)
           .set("Origin", origin)
-          .send({ municipalityIds: [m2.id] })
+          .send({ seccionalIds: [m2.id] })
       ).status,
       200,
     );

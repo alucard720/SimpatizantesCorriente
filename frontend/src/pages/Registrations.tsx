@@ -108,7 +108,7 @@ export function Registrations() {
           <thead>
             <tr>
               <th>Nombre</th>
-              <th>Municipio</th>
+              <th>Seccional</th>
               <th>Escuela</th>
               <th>Estado</th>
               {user?.role === "ADMIN" && <th>Datos protegidos</th>}
@@ -126,8 +126,8 @@ export function Registrations() {
                   </small>
                 </td>
                 <td>
-                  {r.municipality.name}
-                  <small>{r.municipality.province.name}</small>
+                  {r.seccional.name}
+                  <small>{r.seccional.province.name}</small>
                 </td>
                 <td>{r.school?.name || r.schoolName || "Sin especificar"}</td>
                 <td>

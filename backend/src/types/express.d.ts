@@ -6,7 +6,7 @@ declare global {
       auth?: {
         userId: string;
         role: RoleCode;
-        municipalityIds: string[];
+        seccionalIds: string[];
         sessionId: string;
       };
     }

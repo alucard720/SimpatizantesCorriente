@@ -3,15 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import type { CatalogItem, Privacy } from "../types";
 import { api, send, message } from "../services/api";
 import { Captcha } from "../components/Captcha";
+import { CatalogSelect } from "../components/CatalogSelect";
 export function Register() {
   const navigate = useNavigate();
   const [provinces, setProvinces] = useState<CatalogItem[]>([]),
-    [municipalities, setMunicipalities] = useState<CatalogItem[]>([]),
-    [schools, setSchools] = useState<CatalogItem[]>([]);
+    [seccionales, setSeccionales] = useState<CatalogItem[]>([]);
   const [provinceId, setProvince] = useState(""),
-    [municipalityId, setMunicipality] = useState(""),
-    [schoolId, setSchool] = useState(""),
-    [search, setSearch] = useState("");
+    [seccionalId, setSeccional] = useState("");
   const [privacy, setPrivacy] = useState<Privacy | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -29,37 +27,18 @@ export function Register() {
       .catch((e) => setError(message(e)));
   }, []);
   useEffect(() => {
-    setMunicipalities([]);
+    setSeccionales([]);
     if (!provinceId) return;
     const c = new AbortController();
-    void api<CatalogItem[]>(`/public/municipalities?provinceId=${provinceId}`, {
+    void api<CatalogItem[]>(`/public/seccionales?provinceId=${provinceId}`, {
       signal: c.signal,
     })
-      .then(setMunicipalities)
+      .then(setSeccionales)
       .catch((e) => {
         if (!c.signal.aborted) setError(message(e));
       });
     return () => c.abort();
   }, [provinceId]);
-  useEffect(() => {
-    setSchools([]);
-    if (!municipalityId) return;
-    const c = new AbortController();
-    const timer = setTimeout(() => {
-      void api<CatalogItem[]>(
-        `/public/schools?municipalityId=${municipalityId}&q=${encodeURIComponent(search)}`,
-        { signal: c.signal },
-      )
-        .then(setSchools)
-        .catch((e) => {
-          if (!c.signal.aborted) setError(message(e));
-        });
-    }, 250);
-    return () => {
-      clearTimeout(timer);
-      c.abort();
-    };
-  }, [municipalityId, search]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!privacy) return;
@@ -73,12 +52,8 @@ export function Register() {
         cedula: data.get("cedula"),
         phone: data.get("phone"),
         provinceId,
-        municipalityId,
-        schoolId: schoolId || undefined,
-        schoolName:
-          !schoolId && data.get("schoolName")
-            ? data.get("schoolName")
-            : undefined,
+        seccionalId,
+        schoolName: String(data.get("schoolName") || "").trim() || undefined,
         consent: data.get("consent") === "on",
         consentVersion: privacy.version,
         captchaToken: token || undefined,
@@ -114,7 +89,7 @@ export function Register() {
           <h3>Un registro sencillo</h3>
           <p>
             No necesitas crear una cuenta. Completa tus datos y selecciona tu
-            municipio.
+            seccional.
           </p>
         </div>
         <div className="intro-note">
@@ -179,46 +154,11 @@ export function Register() {
             </div>
             <h3 className="form-section">Tu comunidad educativa</h3>
             <div className="form-grid">
-              <label>
-                Provincia *
-                <select
-                  value={provinceId}
-                  onChange={(e) => {
-                    setProvince(e.target.value);
-                    setMunicipality("");
-                    setSchool("");
-                    setSearch("");
-                  }}
-                  required
-                >
-                  <option value="">Selecciona una provincia</option>
-                  {provinces.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Municipio *
-                <select
-                  value={municipalityId}
-                  disabled={!provinceId}
-                  onChange={(e) => {
-                    setMunicipality(e.target.value);
-                    setSchool("");
-                    setSearch("");
-                  }}
-                  required
-                >
-                  <option value="">Selecciona un municipio</option>
-                  {municipalities.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <CatalogSelect label="Provincia" items={provinces} value={provinceId} required
+                onChange={id => { setProvince(id); setSeccional(""); setSeccionales([]); }} />
+              <CatalogSelect key={provinceId} label="Seccional" items={seccionales} value={seccionalId} required
+                disabled={!provinceId || !seccionales.length}
+                onChange={setSeccional} />
             </div>
             {!provinces.length && (
               <p className="notice">
@@ -227,50 +167,20 @@ export function Register() {
               </p>
             )}
             <label>
-              Buscar escuela <span className="muted">(opcional)</span>
+              Nombre de la escuela <span className="muted">(opcional)</span>
               <input
-                value={search}
-                disabled={!municipalityId}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setSchool("");
-                }}
-                placeholder="Escribe parte del nombre"
-                maxLength={100}
+                name="schoolName"
+                minLength={2}
+                maxLength={200}
+                placeholder="Escribe el nombre de la escuela"
               />
             </label>
-            <label>
-              Escuela del catálogo
-              <select
-                value={schoolId}
-                onChange={(e) => setSchool(e.target.value)}
-                disabled={!municipalityId}
-              >
-                <option value="">No aparece / completar después</option>
-                {schools.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {!schoolId && (
-              <label>
-                Nombre de la escuela <span className="muted">(opcional)</span>
-                <input
-                  name="schoolName"
-                  minLength={2}
-                  maxLength={200}
-                  placeholder="Si aún no aparece en el catálogo"
-                />
-              </label>
-            )}
             <label className="check">
               <input type="checkbox" name="consent" required />
               <span>
                 Confirmo mis datos y consiento voluntariamente su tratamiento
                 para registrar mi simpatía y gestionar la organización por
-                municipio, según el{" "}
+                seccional, según el{" "}
                 <Link to="/privacidad" target="_blank">
                   aviso de privacidad
                 </Link>
@@ -288,6 +198,7 @@ export function Register() {
               disabled={
                 !privacy ||
                 !provinces.length ||
+                !seccionalId ||
                 (Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) && !token)
               }
             >

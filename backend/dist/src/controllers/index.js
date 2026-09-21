@@ -13,8 +13,8 @@ const context = (req) => ({
 export const getProvinces = async (_req, res) => {
     res.json(await catalog.provinces());
 };
-export const getMunicipalities = async (req, res) => {
-    res.json(await catalog.municipalities(req.query));
+export const getSeccionales = async (req, res) => {
+    res.json(await catalog.seccionales(req.query));
 };
 export const getSchools = async (req, res) => {
     res.json(await catalog.schools(req.query));
@@ -25,9 +25,9 @@ export const privacy = (_req, res) => {
         controller: env.PRIVACY_CONTROLLER,
         contact: env.PRIVACY_CONTACT,
         retention: env.PRIVACY_RETENTION,
-        purpose: "Registrar voluntariamente su simpatía por la Corriente Magisterial Juan Pablo Duarte y gestionar su organización por municipio.",
-        fields: "Nombre, apellido, cédula, teléfono, municipio y escuela opcional.",
-        access: "Los líderes autorizados ven nombre, escuela, municipio y estado de su ámbito. Solo administradores pueden recuperar cédula y teléfono, con motivo y auditoría.",
+        purpose: "Registrar voluntariamente su simpatía por la Corriente Magisterial Juan Pablo Duarte y gestionar su organización por seccional.",
+        fields: "Nombre, apellido, cédula, teléfono, seccional y escuela opcional.",
+        access: "Los líderes autorizados ven nombre, escuela, seccional y estado de su ámbito. Solo administradores pueden recuperar cédula y teléfono, con motivo y auditoría.",
         rights: "Solicite acceso, corrección, retiro del consentimiento o supresión a través del contacto del responsable.",
     });
 };
@@ -65,7 +65,7 @@ export const me = async (req, res) => {
     res.json({
         ...user,
         role: req.auth.role,
-        municipalityIds: req.auth.municipalityIds,
+        seccionalIds: req.auth.seccionalIds,
     });
 };
 export const listRegistrations = async (req, res) => {
@@ -98,8 +98,8 @@ export const createUser = async (req, res) => {
 export const setUserActive = async (req, res) => {
     res.json(await adminService.setUserActive(req.params.id, req.body, context(req)));
 };
-export const assignMunicipalities = async (req, res) => {
-    res.json(await adminService.assignMunicipalities(req.params.id, req.body, context(req)));
+export const assignSeccionales = async (req, res) => {
+    res.json(await adminService.assignSeccionales(req.params.id, req.body, context(req)));
 };
 export const auditLogs = async (req, res) => {
     res.json(await adminService.auditLogs(req.query, context(req)));

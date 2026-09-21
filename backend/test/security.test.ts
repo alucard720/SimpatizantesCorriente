@@ -70,15 +70,15 @@ test("consentimiento y relación usuario-líder obligatorios", () => {
     false,
   );
 });
-test("el ámbito sin autenticación o sin municipios falla cerrado", () => {
+test("el ámbito sin autenticación o sin seccionales falla cerrado", () => {
   assert.deepEqual(registrationScope(undefined), { id: { in: [] } });
   assert.deepEqual(
     registrationScope({
       userId: "u",
       role: "LEADER",
-      municipalityIds: [],
+      seccionalIds: [],
       sessionId: "s",
     }),
-    { municipalityId: { in: [] } },
+    { seccionalId: { in: [] } },
   );
 });

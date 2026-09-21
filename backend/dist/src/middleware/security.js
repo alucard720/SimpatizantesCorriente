@@ -30,9 +30,9 @@ export const requireAuth = async (req, _res, next) => {
                     role: true,
                     leader: {
                         include: {
-                            municipalities: {
+                            seccionales: {
                                 where: {
-                                    municipality: { active: true, province: { active: true } },
+                                    seccional: { active: true, province: { active: true } },
                                 },
                             },
                         },
@@ -52,7 +52,7 @@ export const requireAuth = async (req, _res, next) => {
         userId: session.userId,
         sessionId: session.id,
         role: session.user.role.code,
-        municipalityIds: session.user.leader?.municipalities.map((v) => v.municipalityId) ?? [],
+        seccionalIds: session.user.leader?.seccionales.map((v) => v.seccionalId) ?? [],
     };
     next();
 };

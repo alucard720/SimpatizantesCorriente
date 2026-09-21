@@ -14,8 +14,8 @@ const context = (req: Request) => ({
 export const getProvinces: RequestHandler = async (_req, res) => {
   res.json(await catalog.provinces());
 };
-export const getMunicipalities: RequestHandler = async (req, res) => {
-  res.json(await catalog.municipalities(req.query));
+export const getSeccionales: RequestHandler = async (req, res) => {
+  res.json(await catalog.seccionales(req.query));
 };
 export const getSchools: RequestHandler = async (req, res) => {
   res.json(await catalog.schools(req.query));
@@ -27,10 +27,10 @@ export const privacy: RequestHandler = (_req, res) => {
     contact: env.PRIVACY_CONTACT,
     retention: env.PRIVACY_RETENTION,
     purpose:
-      "Registrar voluntariamente su simpatía por la Corriente Magisterial Juan Pablo Duarte y gestionar su organización por municipio.",
-    fields: "Nombre, apellido, cédula, teléfono, municipio y escuela opcional.",
+      "Registrar voluntariamente su simpatía por la Corriente Magisterial Juan Pablo Duarte y gestionar su organización por seccional.",
+    fields: "Nombre, apellido, cédula, teléfono, seccional y escuela opcional.",
     access:
-      "Los líderes autorizados ven nombre, escuela, municipio y estado de su ámbito. Solo administradores pueden recuperar cédula y teléfono, con motivo y auditoría.",
+      "Los líderes autorizados ven nombre, escuela, seccional y estado de su ámbito. Solo administradores pueden recuperar cédula y teléfono, con motivo y auditoría.",
     rights:
       "Solicite acceso, corrección, retiro del consentimiento o supresión a través del contacto del responsable.",
   });
@@ -69,7 +69,7 @@ export const me: RequestHandler = async (req, res) => {
   res.json({
     ...user,
     role: req.auth!.role,
-    municipalityIds: req.auth!.municipalityIds,
+    seccionalIds: req.auth!.seccionalIds,
   });
 };
 export const listRegistrations: RequestHandler = async (req, res) => {
@@ -115,9 +115,9 @@ export const setUserActive: RequestHandler = async (req, res) => {
     await adminService.setUserActive(req.params.id, req.body, context(req)),
   );
 };
-export const assignMunicipalities: RequestHandler = async (req, res) => {
+export const assignSeccionales: RequestHandler = async (req, res) => {
   res.json(
-    await adminService.assignMunicipalities(
+    await adminService.assignSeccionales(
       req.params.id,
       req.body,
       context(req),
@@ -128,7 +128,7 @@ export const auditLogs: RequestHandler = async (req, res) => {
   res.json(await adminService.auditLogs(req.query, context(req)));
 };
 export const createCatalog =
-  (kind: "province" | "municipality" | "school"): RequestHandler =>
+  (kind: "province" | "seccional" | "school"): RequestHandler =>
   async (req, res) => {
     res
       .status(201)

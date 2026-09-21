@@ -16,25 +16,26 @@ export async function register(raw, ctx) {
     const id = randomUUID();
     try {
         await db.$transaction(async (tx) => {
-            const municipality = await tx.municipality.findFirst({
+            const seccional = await tx.seccional.findFirst({
                 where: {
-                    id: input.municipalityId,
+                    id: input.seccionalId,
+                    number: { not: null },
                     provinceId: input.provinceId,
                     active: true,
                     province: { active: true },
                 },
             });
-            if (!municipality)
-                throw new HttpError(400, "Municipio no válido para la provincia");
+            if (!seccional)
+                throw new HttpError(400, "Seccional no válida para la provincia");
             if (input.schoolId &&
                 !(await tx.school.findFirst({
                     where: {
                         id: input.schoolId,
-                        municipalityId: input.municipalityId,
+                        seccionalId: input.seccionalId,
                         active: true,
                     },
                 })))
-                throw new HttpError(400, "Escuela no válida para el municipio");
+                throw new HttpError(400, "Escuela no válida para la seccional");
             await tx.registration.create({
                 data: {
                     id,
@@ -43,7 +44,7 @@ export async function register(raw, ctx) {
                     cedulaEncrypted: encrypt(input.cedula, `registration:${id}:cedula`),
                     cedulaHmac: cedulaDigest(input.cedula),
                     phoneEncrypted: encrypt(input.phone, `registration:${id}:phone`),
-                    municipalityId: input.municipalityId,
+                    seccionalId: input.seccionalId,
                     schoolId: input.schoolId,
                     schoolName: input.schoolName,
                     consentVersion: input.consentVersion,
@@ -69,7 +70,7 @@ export async function listRegistrations(raw, auth, ctx) {
     const where = {
         AND: [
             registrationScope(auth),
-            { municipalityId: query.municipalityId, status: query.status },
+            { seccionalId: query.seccionalId, status: query.status },
         ],
     };
     return db.$transaction(async (tx) => {
