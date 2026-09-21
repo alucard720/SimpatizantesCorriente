@@ -5,16 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node dist/src/server.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "admin:create": "tsx scripts/create-admin.ts",
-    "test": "tsx --test test/security.test.ts test/territories.test.ts",
-    "test:integration": "tsx --test test/integration.test.ts",
-    "catalog:sync": "tsx scripts/sync-territories.ts",
+    "test": "node --import tsx --test test/security.test.ts test/catalog.test.ts",
+    "test:integration": "node --import tsx --test test/integration.test.ts",
     "admin:dev": "tsx scripts/setup-dev-admin.ts"
   },
   "prisma": {

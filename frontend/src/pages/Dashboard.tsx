@@ -28,7 +28,7 @@ export function Dashboard() {
       <p className="lead">
         {user?.role === "ADMIN"
           ? "Resumen general de los registros recibidos."
-          : "Resumen de los municipios asignados a tu líder."}
+          : "Resumen de las seccionales asignados a tu líder."}
       </p>
       {error && (
         <p role="alert" className="error">

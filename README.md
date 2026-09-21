@@ -4,9 +4,9 @@ Proyecto editable con Node.js, Express 5, TypeScript, Prisma 6.19, PostgreSQL 17
 
 ## Decisión incorporada: un líder, varios usuarios
 
-`Leader 1 → N User`; cada usuario LEADER pertenece a **un** líder. Los municipios se asignan al líder mediante `leader_municipalities`. Todos sus usuarios comparten ese ámbito, con credenciales, sesiones y auditoría individuales. ADMIN no pertenece a un líder. Un municipio puede tener varios líderes. Las modificaciones del ámbito se aplican en la siguiente solicitud porque el servidor consulta los permisos en base de datos.
+`Leader 1 → N User`; cada usuario LEADER pertenece a **un** líder. Las seccionales se asignan al líder mediante `leader_municipalities`. Todos sus usuarios comparten ese ámbito, con credenciales, sesiones y auditoría individuales. ADMIN no pertenece a un líder. Una seccional puede tener varios líderes. Las modificaciones del ámbito se aplican en la siguiente solicitud porque el servidor consulta los permisos en base de datos.
 
-La conversación de referencia disponible contenía respuestas truncadas. Las decisiones completadas aquí son explícitas: escuela opcional (catálogo o texto libre), provincia derivada del municipio en registros, recuperación de cédula/teléfono solo ADMIN, estado inicial PENDING y sesiones con vencimiento absoluto de ocho horas. No se incluyen datos de simpatizantes ni catálogos inventados.
+La conversación de referencia disponible contenía respuestas truncadas. Las decisiones completadas aquí son explícitas: escuela opcional (catálogo o texto libre), provincia derivada de la seccional en registros, recuperación de cédula/teléfono solo ADMIN, estado inicial PENDING y sesiones con vencimiento absoluto de ocho horas. No se incluyen datos de simpatizantes ni catálogos inventados.
 
 ## Requisitos
 
@@ -37,7 +37,6 @@ Guarde una en `DATA_ENCRYPTION_KEY` y la otra en `CEDULA_HMAC_KEY`, en `backend/
 npm run db:generate
 npm run db:deploy
 npm run db:seed
-npm run catalog:sync
 npm run admin:create
 npm run dev
 ```
@@ -52,11 +51,11 @@ El instalador de administrador pide nombre, apellido, correo y contraseña ocult
 ### Primer uso
 
 1. Entre por `/login` con el administrador creado.
-2. Ejecute `npm run catalog:sync` para cargar provincias y municipios oficiales; las escuelas pueden añadirse después en Administración → Catálogos. No se reciben registros sin un municipio válido.
-3. En Líderes, cree un perfil y asigne sus municipios. Puede seleccionar municipios de varias provincias antes de guardar.
+2. Ejecute `npm run db:deploy` para cargar el catálogo local de provincias y seccionales; las escuelas pueden añadirse después en Administración → Catálogos. No se reciben registros sin una seccional válida.
+3. En Líderes, cree un perfil y asigne sus seccionales. Puede seleccionar seccionales de varias provincias antes de guardar.
 4. En Usuarios, cree uno o varios accesos LEADER para ese mismo perfil.
 5. El formulario `/` queda abierto sin autenticación. La escuela puede dejarse vacía o escribirse como texto libre.
-6. Los usuarios LEADER consultan y actualizan el estado de los registros de sus municipios. ADMIN administra todos los ámbitos y puede solicitar los datos protegidos con un motivo.
+6. Los usuarios LEADER consultan y actualizan el estado de los registros de sus seccionales. ADMIN administra todos los ámbitos y puede solicitar los datos protegidos con un motivo.
 
 ## Comandos
 
@@ -131,11 +130,11 @@ frontend/
 - `leaders`: perfil con nombre y estado; **sin credenciales propias**; múltiples usuarios.
 - `leader_municipalities`: PK compuesta que evita asignaciones repetidas.
 - `provinces`, `municipalities`, `schools`: catálogo jerárquico, códigos únicos, nombres únicos dentro de su ámbito.
-- `registrations`: nombre y apellido, cédula cifrada y HMAC único, teléfono cifrado, municipio, escuela opcional o texto libre, consentimiento, fuente y estado.
+- `registrations`: nombre y apellido, cédula cifrada y HMAC único, teléfono cifrado, seccional, escuela opcional o texto libre, consentimiento, fuente y estado.
 - `audit_logs`: actor individual, acción, entidad, requestId y motivo; sin cédulas, teléfonos, contraseñas ni tokens.
 - `sessions`: complemento técnico; token aleatorio guardado como SHA-256 y vencimiento.
 
-Se emplean UUID y `timestamptz`. La provincia de una inscripción se deriva del municipio para evitar divergencias. La FK compuesta escuela/municipio impide asociaciones inconsistentes. Índices para ámbitos, estado, fechas, sesiones y auditoría. Restricciones adicionales en SQL validan nombres, email normalizado, hash, consentimiento y vínculo rol/líder. Triggers impiden UPDATE/DELETE/TRUNCATE de auditoría; el administrador de la base aún podría deshabilitarlos: no es un registro inmutable frente al propietario de PostgreSQL.
+Se emplean UUID y `timestamptz`. La provincia de una inscripción se deriva de la seccional para evitar divergencias. La FK compuesta escuela/seccional impide asociaciones inconsistentes. Índices para ámbitos, estado, fechas, sesiones y auditoría. Restricciones adicionales en SQL validan nombres, email normalizado, hash, consentimiento y vínculo rol/líder. Triggers impiden UPDATE/DELETE/TRUNCATE de auditoría; el administrador de la base aún podría deshabilitarlos: no es un registro inmutable frente al propietario de PostgreSQL.
 
 ## API
 
@@ -147,8 +146,8 @@ Todos los cuerpos son JSON. Toda escritura debe incluir `Origin` igual a `FRONTE
 | ----------------------------------------------------- | ------------------------------------------------------- |
 | GET `/api/public/privacy`                             | Texto y versión del consentimiento.                     |
 | GET `/api/public/provinces`                           | Provincias activas.                                     |
-| GET `/api/public/municipalities?provinceId=UUID`      | Municipios activos de la provincia.                     |
-| GET `/api/public/schools?municipalityId=UUID&q=texto` | Hasta 100 coincidencias; buscar por nombre para acotar. |
+| GET `/api/public/seccionales?provinceId=UUID`      | Seccionales activas de la provincia.                     |
+| GET `/api/public/schools?seccionalId=UUID&q=texto` | Hasta 100 coincidencias; buscar por nombre para acotar. |
 | POST `/api/public/registrations`                      | Inscripción; 202 idéntico para nuevo y duplicado.       |
 
 Cuerpo de inscripción (marcadores, no datos reales):
@@ -160,7 +159,7 @@ Cuerpo de inscripción (marcadores, no datos reales):
   "cedula": "<11 dígitos>",
   "phone": "<10 a 15 dígitos, + opcional>",
   "provinceId": "<UUID>",
-  "municipalityId": "<UUID>",
+  "seccionalId": "<UUID>",
   "schoolName": "<nombre opcional; excluir si se envía schoolId>",
   "consent": true,
   "consentVersion": "2026-01",
@@ -175,7 +174,7 @@ La validación de cédula es de **formato**, no consulta identidad ni existencia
 | Método y ruta           | Cuerpo                     |
 | ----------------------- | -------------------------- |
 | POST `/api/auth/login`  | `{email,password}`         |
-| GET `/api/auth/me`      | Usuario, rol y municipios. |
+| GET `/api/auth/me`      | Usuario, rol y seccionales. |
 | POST `/api/auth/logout` | Revoca sesión actual.      |
 
 ### ADMIN y LEADER
@@ -183,7 +182,7 @@ La validación de cédula es de **formato**, no consulta identidad ni existencia
 | Método y ruta                                 | Uso                                                                                               |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------- |
 | GET `/api/private/dashboard`                  | Totales por estado, filtrados por ámbito.                                                         |
-| GET `/api/private/registrations`              | `page`, `pageSize` (máx. 100), `municipalityId`, `status`. Retorna `{items,total,page,pageSize}`. |
+| GET `/api/private/registrations`              | `page`, `pageSize` (máx. 100), `seccionalId`, `status`. Retorna `{items,total,page,pageSize}`. |
 | PATCH `/api/private/registrations/:id/status` | `{status: "PENDING"                                                                               | "VERIFIED" | "ARCHIVED"}`; 404 fuera del ámbito. |
 
 ### Solo ADMIN
@@ -194,12 +193,12 @@ La validación de cédula es de **formato**, no consulta identidad ni existencia
 | GET `/api/private/admin/users`                      | Array paginado; sin hashes ni datos cifrados.                                                         |
 | POST `/api/private/admin/users`                     | `{firstName,lastName,email,password,role,leaderId?,phone?}`. LEADER exige leaderId; ADMIN lo prohíbe. |
 | PATCH `/api/private/admin/users/:id`                | `{active}`; desactivar revoca todas sus sesiones. No permite autodesactivación.                       |
-| GET `/api/private/admin/leaders`                    | Array paginado, municipios y número de usuarios.                                                      |
+| GET `/api/private/admin/leaders`                    | Array paginado, seccionales y número de usuarios.                                                      |
 | POST `/api/private/admin/leaders`                   | `{name}`.                                                                                             |
-| PUT `/api/private/admin/leaders/:id/municipalities` | `{municipalityIds: [...]}` reemplaza el ámbito completo, vacío lo revoca.                             |
+| PUT `/api/private/admin/leaders/:id/seccionales` | `{seccionalIds: [...]}` reemplaza el ámbito completo, vacío lo revoca.                             |
 | POST `/api/private/admin/provinces`                 | `{code,name}`.                                                                                        |
-| POST `/api/private/admin/municipalities`            | `{provinceId,code,name}`.                                                                             |
-| POST `/api/private/admin/schools`                   | `{municipalityId,name,code?}`.                                                                        |
+| POST `/api/private/admin/seccionales`            | `{provinceId,number,name}`.                                                                             |
+| POST `/api/private/admin/schools`                   | `{seccionalId,name,code?}`.                                                                        |
 | GET `/api/private/admin/audit-logs`                 | Array paginado.                                                                                       |
 
 Listados administrativos: `page=1&pageSize=25`, máximo 100 por página. La interfaz de creación de usuarios muestra hasta 100 líderes; para un catálogo mayor, use el endpoint paginado y `leaderId` en API hasta ampliar ese selector.
@@ -209,7 +208,7 @@ Listados administrativos: `page=1&pageSize=25`, máximo 100 por página. La inte
 - Contraseñas scrypt N=32768, r=8, p=1, salt aleatoria. Mensaje uniforme y cálculo scrypt también para correos inexistentes.
 - Cinco intentos fallidos bloquean una cuenta 15 minutos. Bloqueo de fila para serializar intentos paralelos.
 - Cookie HttpOnly, SameSite=Strict, Secure en producción, sin token en localStorage. Sesiones revocables en base de datos; expiración absoluta de ocho horas.
-- RBAC y filtros por municipio en el servidor; no se confía en el frontend para permisos.
+- RBAC y filtros por seccional en el servidor; no se confía en el frontend para permisos.
 - Protección CSRF mediante origen exacto obligatorio en escrituras y SameSite; CORS restringido. El cliente de servidor a servidor también debe enviar Origin. `Origin` no sustituye autenticación.
 - AES-256-GCM, IV aleatorio por valor, AAD que vincula campo e ID. Sobre `v1.iv.tag.ciphertext`. HMAC-SHA256 con clave distinta para duplicados.
 - Datos protegidos excluidos de listados. Recuperación ADMIN con motivo; la interfaz los oculta al minuto o al cerrar la consulta. Ningún dato de sesión se persiste en el navegador fuera de la cookie.
@@ -227,7 +226,7 @@ docker compose exec db createdb -U corriente corriente_test
 TEST_DATABASE_URL='postgresql://corriente:local-development-only@localhost:5432/corriente_test?schema=public' npm run test:integration
 ```
 
-Se comprueban cifrado y recuperación, duplicados, rechazo de escuela de otro municipio, RBAC, consentimiento, CSRF, mismo líder con dos usuarios, cambio inmediato de ámbito, auditoría por usuario, revocación, bloqueo por intentos y restricciones de base de datos.
+Se comprueban cifrado y recuperación, duplicados, rechazo de escuela de otro seccional, RBAC, consentimiento, CSRF, mismo líder con dos usuarios, cambio inmediato de ámbito, auditoría por usuario, revocación, bloqueo por intentos y restricciones de base de datos.
 
 ## Publicación y límites de esta V1
 
@@ -235,7 +234,7 @@ Sirva `frontend/dist` por HTTPS con fallback SPA a `index.html` y reenvíe `/api
 
 Antes de recibir registros reales, complete responsable, contacto y conservación, cree el sitio Turnstile y compruebe sus claves. La configuración de producción rechaza valores de privacidad pendientes, CAPTCHA desactivado y origen sin HTTPS. El texto de privacidad es una plantilla operativa editable, no una evaluación legal.
 
-Los nombres, municipio, escuela y simpatía implícita siguen siendo datos sensibles aunque cédula y teléfono estén cifrados. Proteja accesos, copias de seguridad y logs de infraestructura. No registre cookies ni cuerpos en el proxy. La V1 no implementa MFA, recuperación por email, importación masiva, exportación, reportes avanzados ni borrado automatizado por conservación. `ARCHIVED` es un estado, no una supresión. Solicitudes de derechos y vencimiento del plazo requieren un procedimiento administrativo real antes de operar.
+Los nombres, seccional, escuela y simpatía implícita siguen siendo datos sensibles aunque cédula y teléfono estén cifrados. Proteja accesos, copias de seguridad y logs de infraestructura. No registre cookies ni cuerpos en el proxy. La V1 no implementa MFA, recuperación por email, importación masiva, exportación, reportes avanzados ni borrado automatizado por conservación. `ARCHIVED` es un estado, no una supresión. Solicitudes de derechos y vencimiento del plazo requieren un procedimiento administrativo real antes de operar.
 
 Para rotar cifrado, diseñe primero lectura de claves antiguas por versión y un trabajo que descifre/re-cifre bajo control. No reemplace el secreto sin migrar los registros. Para HMAC, descifre con autorización, recalcule todos los valores bajo una ventana controlada y conserve unicidad antes de activar la nueva clave. La V1 proporciona un formato versionado pero no un comando de rotación.
 
@@ -247,14 +246,6 @@ Consulte `VALIDACION.md` para los resultados ejecutados. El lockfile fija las de
 
 - [Express: seguridad](https://expressjs.com/en/advanced/best-practice-security/)
 - [Prisma 6: migraciones](https://docs.prisma.io/docs/orm/v6/prisma-migrate/getting-started)
-
-## Catálogo territorial oficial
-
-`npm run catalog:sync` importa desde [API Digital: división territorial](https://api.digital.gob.do/v1/territories/api/). Consulta `/provinces` y `/municipalities?provinceCode=XX` bajo `/v1/territories`; la consulta general de municipios devuelve como máximo 100 resultados. No requiere clave.
-
-La descarga completa se valida antes de escribir y se guarda en una sola transacción. El código provincial conserva sus ceros iniciales; el código municipal usa `identifier`, porque `code` se repite entre provincias. Las ejecuciones siguientes actualizan por código o nombre exacto dentro de la provincia y conservan los UUID, relaciones y estado activo existentes. No se eliminan entradas locales; los conflictos abortan toda la importación. Revise variantes de nombres cargadas manualmente antes de sincronizar.
-
-El formulario y los filtros administrativos utilizan el catálogo local y no dependen de la disponibilidad de la API externa. Repita el comando cuando necesite actualizarlo. La sincronización es una operación de mantenimiento por terminal, independiente del seed de roles.
 
 ## Administrador local de desarrollo
 
@@ -272,3 +263,44 @@ Use una sola terminal, desde la raíz del proyecto, para ejecutar `npm run dev`.
 - Cliente: `VITE_API_URL=/api` en `frontend/.env`; Vite reenvía `/api` al puerto 3000.
 
 Si 5173 está ocupado, Vite debe detenerse con un aviso; no debe iniciar en 5174. Cierre la ejecución anterior, sin abrir una segunda copia. No lance `npm run dev` a la vez desde varias terminales o herramientas. Si cambia los puertos deliberadamente, actualice también `FRONTEND_ORIGIN` y el destino del proxy cuando corresponda, y reinicie ambos servidores.
+
+## Catálogo local de seccionales
+
+La migración `20260921000000_local_seccionales` carga 32 provincias y 174 seccionales del Excel. Ya no existe sincronización con servicios territoriales externos. El frontend obtiene los catálogos de nuestra API, respaldada por PostgreSQL, y muestra desplegables de provincias y seccionales relacionadas.
+
+La aplicación de producción está alojada en DigitalOcean. Esta actualización utiliza su base de datos actual y sus variables de entorno existentes; no requiere otra base, proveedor ni esquema. La conexión de desarrollo local no identifica necesariamente la base de producción. Aplicar la migración desde el entorno de la aplicación en DigitalOcean, conservando su `DATABASE_URL`.
+
+### Probar este cambio en local
+
+Con Docker Desktop abierto, ejecutar desde la raíz del proyecto en una misma terminal. Estas variables afectan solamente a esa terminal y tienen prioridad sobre `backend/.env`; no cambian la conexión guardada ni la configuración de DigitalOcean.
+
+```sh
+export DATABASE_URL='postgresql://corriente:local-development-only@localhost:5432/corriente?schema=public'
+export NODE_ENV=development
+export CAPTCHA_PROVIDER=disabled
+export FRONTEND_ORIGIN=http://localhost:5173
+export PORT=3000
+export VITE_API_URL=/api
+export VITE_TURNSTILE_SITE_KEY=''
+docker compose up -d --wait db
+npm run db:generate
+npm run db:deploy
+npm run dev
+```
+
+Las claves de cifrado y los demás valores requeridos siguen cargándose de `backend/.env`. Abrir `http://localhost:5173`, seleccionar una provincia y elegir una de sus seccionales. Por ejemplo, en AZUA debe aparecer `6. TÁBARA ARRIBA`. Al cambiar de provincia se limpia la seccional seleccionada. No iniciar una segunda instancia si ya hay una ejecución de `npm run dev` abierta. El despliegue en DigitalOcean se realizará posteriormente, después de la prueba local.
+
+Ejecutar `npm run db:generate`, `npm run db:deploy` y `npm run build`, y reiniciar backend y frontend juntos: los contratos usan ahora `seccionalId`, `seccionalIds` y `/public/seccionales?provinceId=UUID`.
+
+Antes del despliegue, comprobar el historial con `prisma migrate status` desde `backend`. Si la instalación existente no tiene historial de Prisma, verificar su estructura antes de establecer la migración inicial como aplicada. No ejecutar un reset ni el SQL independiente de `outputs/` contra la aplicación existente. El despliegue debe aplicar únicamente las migraciones pendientes. Tras actualizar ambos servicios, comprobar el listado de provincias, la selección de seccionales, y el acceso de los líderes a sus registros.
+
+Prisma expone `Seccional` y `LeaderSeccional`; las tablas físicas siguen siendo `municipalities` y `leader_municipalities`, con las columnas `municipality_id`, para conservar claves foráneas, UUID y relaciones. `n_seccional` es positivo y único dentro de una provincia. Su valor NULL identifica un municipio histórico sin correspondencia confirmada: no está disponible para nuevos registros, pero conserva registros, escuelas y permisos anteriores. Las coincidencias exactas de nombre dentro de una provincia reutilizan el UUID. Revisar las correspondencias restantes explícitamente, sin asignar escuelas ni ampliar permisos por semejanza de nombres.
+
+Se agrupan Santiago I y II en Santiago; se conservan los nombres del archivo. Para reutilizar provincias previas se comparan sin tildes y se reconocen los alias VALVERDE MAO/VALVERDE y SANCHE RAMÍREZ/SÁNCHEZ RAMÍREZ. Las provincias duplicadas equivalentes impiden aplicar la migración hasta su revisión. El SQL independiente de `outputs/` es una referencia; en esta aplicación se utiliza la migración Prisma y no se crean catálogos paralelos.
+
+Consulta de conciliación (solo metadatos):
+```sql
+SELECT p.name AS provincia, m.id, m.name AS municipio_historico
+FROM municipalities m JOIN provinces p ON p.id = m.province_id
+WHERE m.n_seccional IS NULL ORDER BY p.name, m.name;
+```

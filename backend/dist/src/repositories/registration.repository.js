@@ -5,7 +5,7 @@ export const publicRegistrationSelect = {
     status: true,
     createdAt: true,
     schoolName: true,
-    municipality: {
+    seccional: {
         select: {
             id: true,
             name: true,
@@ -19,5 +19,5 @@ export function registrationScope(auth) {
         return { id: { in: [] } };
     return auth.role === "ADMIN"
         ? {}
-        : { municipalityId: { in: auth.municipalityIds } };
+        : { seccionalId: { in: auth.seccionalIds } };
 }

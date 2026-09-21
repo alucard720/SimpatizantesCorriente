@@ -21,7 +21,6 @@
     "db:deploy": "npm run db:deploy -w backend",
     "db:seed": "npm run db:seed -w backend",
     "admin:create": "npm run admin:create -w backend",
-    "catalog:sync": "npm run catalog:sync -w backend",
     "admin:dev": "npm run admin:dev -w backend"
   },
   "devDependencies": {

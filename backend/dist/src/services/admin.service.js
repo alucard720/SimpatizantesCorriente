@@ -16,7 +16,7 @@ export function listUsers(raw) {
             leader: {
                 select: {
                     id: true,
-                    municipalities: { select: { municipalityId: true } },
+                    seccionales: { select: { seccionalId: true } },
                 },
             },
         },
@@ -25,9 +25,9 @@ export function listUsers(raw) {
         skip: (q.page - 1) * q.pageSize,
     });
 }
-export async function assignMunicipalities(idRaw, raw, ctx) {
+export async function assignSeccionales(idRaw, raw, ctx) {
     const id = uuid.parse(idRaw);
-    const { municipalityIds } = assignmentInput.parse(raw);
+    const { seccionalIds } = assignmentInput.parse(raw);
     return db.$transaction(async (tx) => {
         await tx.$queryRaw `SELECT id FROM leaders WHERE id = ${id}::uuid FOR UPDATE`;
         const leader = await tx.leader.findUnique({
@@ -36,23 +36,23 @@ export async function assignMunicipalities(idRaw, raw, ctx) {
         });
         if (!leader || !leader.active)
             throw new HttpError(404, "Líder no encontrado");
-        if ((await tx.municipality.count({
+        if ((await tx.seccional.count({
             where: {
-                id: { in: municipalityIds },
+                id: { in: seccionalIds },
                 active: true,
                 province: { active: true },
             },
-        })) !== municipalityIds.length)
-            throw new HttpError(400, "Municipios inválidos");
-        await tx.leaderMunicipality.deleteMany({ where: { leaderId: id } });
-        await tx.leaderMunicipality.createMany({
-            data: municipalityIds.map((municipalityId) => ({
+        })) !== seccionalIds.length)
+            throw new HttpError(400, "Seccionales inválidas");
+        await tx.leaderSeccional.deleteMany({ where: { leaderId: id } });
+        await tx.leaderSeccional.createMany({
+            data: seccionalIds.map((seccionalId) => ({
                 leaderId: id,
-                municipalityId,
+                seccionalId,
             })),
         });
         await audit(tx, ctx, "LEADER_ASSIGNED", "Leader", id);
-        return { id, municipalityIds };
+        return { id, seccionalIds };
     });
 }
 export async function setUserActive(idRaw, raw, ctx) {
@@ -97,10 +97,10 @@ export function listLeaders(raw) {
             id: true,
             name: true,
             active: true,
-            municipalities: {
+            seccionales: {
                 select: {
-                    municipalityId: true,
-                    municipality: { select: { name: true } },
+                    seccionalId: true,
+                    seccional: { select: { name: true } },
                 },
             },
             _count: { select: { users: true } },

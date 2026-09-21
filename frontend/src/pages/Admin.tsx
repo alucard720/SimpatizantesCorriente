@@ -1,13 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, send, message } from "../services/api";
 import type { AdminUser, Leader, Audit, CatalogItem } from "../types";
+import { CatalogSelect } from "../components/CatalogSelect";
+import { catalogLabel } from "../services/catalog";
 export function Admin() {
   const [tab, setTab] = useState("leaders"),
     [users, setUsers] = useState<AdminUser[]>([]),
     [leaders, setLeaders] = useState<Leader[]>([]),
     [logs, setLogs] = useState<Audit[]>([]),
     [provinces, setProvinces] = useState<CatalogItem[]>([]),
-    [municipalities, setMunicipalities] = useState<CatalogItem[]>([]);
+    [seccionales, setSeccionales] = useState<CatalogItem[]>([]);
+  const [schoolSeccional, setSchoolSeccional] = useState("");
+  const [newProvince, setNewProvince] = useState("");
   const [province, setProvince] = useState(""),
     [role, setRole] = useState("LEADER"),
     [page, setPage] = useState(1),
@@ -24,14 +28,14 @@ export function Admin() {
   }, [revision]);
   useEffect(() => {
     if (!province) {
-      setMunicipalities([]);
+      setSeccionales([]);
       return;
     }
     const c = new AbortController();
-    void api<CatalogItem[]>(`/public/municipalities?provinceId=${province}`, {
+    void api<CatalogItem[]>(`/public/seccionales?provinceId=${province}`, {
       signal: c.signal,
     })
-      .then(setMunicipalities)
+      .then(setSeccionales)
       .catch((e) => {
         if (!c.signal.aborted) setError(message(e));
       });
@@ -96,7 +100,7 @@ export function Admin() {
     setAssigned(
       leaders
         .find((l) => l.id === id)
-        ?.municipalities.map((m) => m.municipalityId) ?? [],
+        ?.seccionales.map((m) => m.seccionalId) ?? [],
     );
   };
   return (
@@ -140,7 +144,7 @@ export function Admin() {
             <section className="card">
               <h2>Crear líder</h2>
               <p>
-                Un líder agrupa varios usuarios y sus municipios autorizados.
+                Un líder agrupa varios usuarios y sus seccionales autorizadas.
               </p>
               <form onSubmit={submit("leaders")}>
                 <label>
@@ -153,7 +157,7 @@ export function Admin() {
               </form>
             </section>
             <section className="card">
-              <h2>Asignar municipios</h2>
+              <h2>Asignar seccionales</h2>
               <label>
                 Líder
                 <select
@@ -169,21 +173,10 @@ export function Admin() {
                   ))}
                 </select>
               </label>
-              <label>
-                Provincia
-                <select
-                  value={province}
-                  onChange={(e) => setProvince(e.target.value)}
-                >
-                  <option value="">Seleccionar</option>
-                  {provinces.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {municipalities.map((m) => (
+              <CatalogSelect label="Provincia" items={provinces} value={province} required
+                onChange={id => { setProvince(id); setSeccionales([]); setSchoolSeccional(""); }} />
+              {province && !seccionales.length && <p role="status">No hay seccionales disponibles.</p>}
+              {seccionales.map((m) => (
                 <label className="check" key={m.id}>
                   <input
                     type="checkbox"
@@ -197,11 +190,11 @@ export function Admin() {
                       )
                     }
                   />
-                  {m.name}
+                  {catalogLabel(m)}
                 </label>
               ))}
               <p>
-                {assigned.length} municipios seleccionados, incluyendo otras
+                {assigned.length} seccionales seleccionadas, incluyendo otras
                 provincias.
               </p>
               <button
@@ -209,8 +202,8 @@ export function Admin() {
                 disabled={busy || !selectedLeader}
                 onClick={() =>
                   void mutate(
-                    `/private/admin/leaders/${selectedLeader}/municipalities`,
-                    { municipalityIds: assigned },
+                    `/private/admin/leaders/${selectedLeader}/seccionales`,
+                    { seccionalIds: assigned },
                     "PUT",
                   )
                 }
@@ -225,7 +218,7 @@ export function Admin() {
                 <tr>
                   <th>Líder</th>
                   <th>Usuarios</th>
-                  <th>Municipios</th>
+                  <th>Seccionales</th>
                 </tr>
               </thead>
               <tbody>
@@ -234,8 +227,8 @@ export function Admin() {
                     <td>{l.name}</td>
                     <td>{l._count.users}</td>
                     <td>
-                      {l.municipalities
-                        .map((m) => m.municipality.name)
+                      {l.seccionales
+                        .map((m) => m.seccional.name)
                         .join(", ") || "Sin asignaciones"}
                     </td>
                   </tr>
@@ -364,61 +357,28 @@ export function Admin() {
             </form>
           </section>
           <section className="card">
-            <h2>Municipio</h2>
-            <form onSubmit={submit("municipalities")}>
+            <h2>Seccional</h2>
+            <form onSubmit={submit("seccionales")}>
+              <CatalogSelect label="Provincia" name="provinceId" items={provinces} value={newProvince} onChange={setNewProvince} required />
               <label>
-                Provincia
-                <select name="provinceId" required>
-                  <option value="">Seleccionar</option>
-                  {provinces.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Código oficial
-                <input name="code" maxLength={20} required />
+                Número de seccional
+                <input name="number" type="number" min={1} step={1} required />
               </label>
               <label>
                 Nombre
-                <input name="name" maxLength={100} required />
+                <input name="name" maxLength={150} required />
               </label>
               <button className="primary" disabled={busy}>
-                Añadir municipio
+                Añadir seccional
               </button>
             </form>
           </section>
           <section className="card">
             <h2>Escuela</h2>
             <form onSubmit={submit("schools")}>
-              <label>
-                Provincia
-                <select
-                  value={province}
-                  onChange={(e) => setProvince(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar</option>
-                  {provinces.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Municipio
-                <select name="municipalityId" required>
-                  <option value="">Seleccionar</option>
-                  {municipalities.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <CatalogSelect label="Provincia" items={provinces} value={province} required
+                onChange={id => { setProvince(id); setSeccionales([]); setSchoolSeccional(""); }} />
+              <CatalogSelect key={province} label="Seccional" name="seccionalId" items={seccionales} value={schoolSeccional} onChange={setSchoolSeccional} disabled={!province} required />
               <label>
                 Código (opcional)
                 <input name="code" maxLength={30} />

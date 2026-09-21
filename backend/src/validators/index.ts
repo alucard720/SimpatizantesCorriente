@@ -20,7 +20,7 @@ export const registrationInput = z
       .refine((v) => /^\d{11}$/.test(v), "La cédula requiere 11 dígitos"),
     phone,
     provinceId: uuid,
-    municipalityId: uuid,
+    seccionalId: uuid,
     schoolId: uuid.optional(),
     schoolName: z.string().trim().min(2).max(200).optional(),
     consent: z.literal(true),
@@ -68,7 +68,7 @@ export const pageInput = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 export const listInput = pageInput.extend({
-  municipalityId: uuid.optional(),
+  seccionalId: uuid.optional(),
   status: z.enum(["PENDING", "VERIFIED", "ARCHIVED"]).optional(),
 });
 export const statusInput = z
@@ -80,17 +80,21 @@ export const reasonInput = z
 export const provinceInput = z
   .object({ code: z.string().trim().min(1).max(20), name })
   .strict();
-export const municipalityInput = provinceInput.extend({ provinceId: uuid });
+export const seccionalInput = z.object({
+  provinceId: uuid,
+  number: z.coerce.number().int().positive(),
+  name: z.string().trim().min(1).max(150),
+}).strict();
 export const schoolInput = z
   .object({
-    municipalityId: uuid,
+    seccionalId: uuid,
     code: z.string().trim().min(1).max(30).optional(),
     name: z.string().trim().min(2).max(200),
   })
   .strict();
 export const assignmentInput = z
   .object({
-    municipalityIds: z
+    seccionalIds: z
       .array(uuid)
       .max(500)
       .refine((v) => new Set(v).size === v.length),

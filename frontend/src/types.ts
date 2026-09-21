@@ -5,12 +5,13 @@ export interface User {
   firstName: string;
   lastName: string;
   role: Role;
-  municipalityIds?: string[];
+  seccionalIds?: string[];
 }
 export interface CatalogItem {
   id: string;
   name: string;
   code?: string | null;
+  number?: number | null;
 }
 export interface Privacy {
   version: string;
@@ -30,7 +31,7 @@ export interface Registration {
   createdAt: string;
   schoolName: string | null;
   school: CatalogItem | null;
-  municipality: CatalogItem & { province: CatalogItem };
+  seccional: CatalogItem & { province: CatalogItem };
 }
 export interface Page<T> {
   items: T[];
@@ -42,7 +43,7 @@ export interface Leader {
   id: string;
   name: string;
   active: boolean;
-  municipalities: { municipalityId: string; municipality: { name: string } }[];
+  seccionales: { seccionalId: string; seccional: { name: string } }[];
   _count: { users: number };
 }
 export interface AdminUser {
@@ -52,7 +53,7 @@ export interface AdminUser {
   email: string;
   active: boolean;
   role: { code: Role };
-  leader: { id: string; municipalities: { municipalityId: string }[] } | null;
+  leader: { id: string; seccionales: { seccionalId: string }[] } | null;
 }
 export interface Audit {
   id: string;

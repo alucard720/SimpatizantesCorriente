@@ -77,74 +77,77 @@ model User {
 }
 
 model Province {
-  id             String         @id @default(uuid()) @db.Uuid
-  code           String         @unique @db.VarChar(20)
-  name           String         @unique @db.VarChar(100)
-  active         Boolean        @default(true)
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  municipalities Municipality[]
+  id          String      @id @default(uuid()) @db.Uuid
+  code        String      @unique @db.VarChar(20)
+  name        String      @unique @db.VarChar(100)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  seccionales Seccional[]
 
   @@map("provinces")
 }
 
-model Municipality {
-  id            String               @id @default(uuid()) @db.Uuid
-  provinceId    String               @map("province_id") @db.Uuid
-  province      Province             @relation(fields: [provinceId], references: [id], onDelete: Restrict)
-  code          String               @unique @db.VarChar(20)
-  name          String               @db.VarChar(100)
-  active        Boolean              @default(true)
-  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+model Seccional {
+  // NULL identifies historical municipalities pending explicit reconciliation.
+  number        Int?              @map("n_seccional")
+  id            String            @id @default(uuid()) @db.Uuid
+  provinceId    String            @map("province_id") @db.Uuid
+  province      Province          @relation(fields: [provinceId], references: [id], onDelete: Restrict)
+  code          String            @unique @db.VarChar(20)
+  name          String            @db.VarChar(150)
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
   schools       School[]
-  leaders       LeaderMunicipality[]
+  leaders       LeaderSeccional[]
   registrations Registration[]
 
   @@unique([provinceId, name])
+  @@unique([provinceId, number])
   @@index([provinceId, active])
   @@map("municipalities")
 }
 
 model School {
-  id             String         @id @default(uuid()) @db.Uuid
-  municipalityId String         @map("municipality_id") @db.Uuid
-  municipality   Municipality   @relation(fields: [municipalityId], references: [id], onDelete: Restrict)
-  code           String?        @unique @db.VarChar(30)
-  name           String         @db.VarChar(200)
-  active         Boolean        @default(true)
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  registrations  Registration[]
+  id            String         @id @default(uuid()) @db.Uuid
+  seccionalId   String         @map("municipality_id") @db.Uuid
+  seccional     Seccional      @relation(fields: [seccionalId], references: [id], onDelete: Restrict)
+  code          String?        @unique @db.VarChar(30)
+  name          String         @db.VarChar(200)
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  registrations Registration[]
 
-  // La FK compuesta de Registration impide escuelas de otro municipio.
-  @@unique([id, municipalityId])
-  @@unique([municipalityId, name])
-  @@index([municipalityId, active])
+  // La FK compuesta de Registration impide escuelas de otra seccional.
+  @@unique([id, seccionalId])
+  @@unique([seccionalId, name])
+  @@index([seccionalId, active])
   @@map("schools")
 }
 
 model Leader {
-  id             String               @id @default(uuid()) @db.Uuid
-  name           String               @db.VarChar(150)
-  users          User[]
-  active         Boolean              @default(true)
-  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
-  municipalities LeaderMunicipality[]
+  id          String            @id @default(uuid()) @db.Uuid
+  name        String            @db.VarChar(150)
+  users       User[]
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  seccionales LeaderSeccional[]
 
   @@map("leaders")
 }
 
-model LeaderMunicipality {
-  leaderId       String       @map("leader_id") @db.Uuid
-  municipalityId String       @map("municipality_id") @db.Uuid
-  leader         Leader       @relation(fields: [leaderId], references: [id], onDelete: Cascade)
-  municipality   Municipality @relation(fields: [municipalityId], references: [id], onDelete: Restrict)
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+model LeaderSeccional {
+  leaderId    String    @map("leader_id") @db.Uuid
+  seccionalId String    @map("municipality_id") @db.Uuid
+  leader      Leader    @relation(fields: [leaderId], references: [id], onDelete: Cascade)
+  seccional   Seccional @relation(fields: [seccionalId], references: [id], onDelete: Restrict)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  @@id([leaderId, municipalityId])
-  @@index([municipalityId])
+  @@id([leaderId, seccionalId])
+  @@index([seccionalId])
   @@map("leader_municipalities")
 }
 
@@ -155,10 +158,10 @@ model Registration {
   cedulaEncrypted String             @map("cedula_encrypted") @db.Text
   cedulaHmac      String             @unique @map("cedula_hmac") @db.Char(64)
   phoneEncrypted  String             @map("phone_encrypted") @db.Text
-  municipalityId  String             @map("municipality_id") @db.Uuid
-  municipality    Municipality       @relation(fields: [municipalityId], references: [id], onDelete: Restrict)
+  seccionalId     String             @map("municipality_id") @db.Uuid
+  seccional       Seccional          @relation(fields: [seccionalId], references: [id], onDelete: Restrict)
   schoolId        String?            @map("school_id") @db.Uuid
-  school          School?            @relation(fields: [schoolId, municipalityId], references: [id, municipalityId], onDelete: Restrict)
+  school          School?            @relation(fields: [schoolId, seccionalId], references: [id, seccionalId], onDelete: Restrict)
   schoolName      String?            @map("school_name") @db.VarChar(200)
   status          RegistrationStatus @default(PENDING)
   source          RegistrationSource @default(PUBLIC_FORM)
@@ -167,8 +170,8 @@ model Registration {
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  @@index([municipalityId, status, createdAt])
-  @@index([schoolId, municipalityId])
+  @@index([seccionalId, status, createdAt])
+  @@index([schoolId, seccionalId])
   @@index([createdAt, id])
   @@map("registrations")
 }
