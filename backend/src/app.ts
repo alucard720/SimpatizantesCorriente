@@ -19,7 +19,7 @@ app.use(
   helmet({
     contentSecurityPolicy: {
     directives: {
-      connectSrc:["self", "https://challenges.cloudflare.com"],
+      connectSrc:["'self'", "https://challenges.cloudflare.com"],
       scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
       frameSrc: ["'self'", "https://challenges.cloudflare.com"],
     },
