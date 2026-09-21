@@ -128,7 +128,13 @@ export const errorHandler: ErrorRequestHandler = (
   }
   // No imprimir error, cuerpo, cabeceras ni valores Prisma: pueden contener datos personales.
   console.error(
-    JSON.stringify({ event: "request_failed", requestId: req.requestId }),
+    JSON.stringify({ event: "request_failed",
+    requestId: req.requestId,
+    errorType: error instanceof Error ? error.name : "Unknown",
+    prismaCode:
+      error instanceof Prisma.PrismaClientKnownRequestError
+        ? error.code
+        : undefined,}),
   );
   res.status(500).json({ error: "Error interno", requestId: req.requestId });
 };
